@@ -122,6 +122,12 @@ cd fairseq
 pip install --editable .
 ```
 
+*Known Issue: [Segmentation fault (core dumped) during pip install](https://bitbucket.org/cffi/cffi/issues/272/segfault-while-installing-via-pip)*
+Use:
+```bash
+pip install --editable . --no-binary cffi
+```
+
 # Getting Started
 
 The [full documentation](https://fairseq.readthedocs.io/) contains instructions
