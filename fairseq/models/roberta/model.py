@@ -252,7 +252,8 @@ class RobertaClassificationHead(nn.Module):
         )
 
     def forward(self, features, **kwargs):
-        x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+        # x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+        x = torch.sum(features, dim=1) # sum the vectors for each token
         x = self.dropout(x)
         x = self.dense(x)
         x = self.activation_fn(x)
