@@ -255,7 +255,6 @@ class TransformerModel(FairseqEncoderDecoderModel):
         src_tokens,
         src_lengths,
         prev_output_tokens,
-        cls_input: Optional[Tensor] = None,
         return_all_hiddens: bool = True,
         features_only: bool = False,
         alignment_layer: Optional[int] = None,
@@ -270,7 +269,6 @@ class TransformerModel(FairseqEncoderDecoderModel):
         encoder_out = self.encoder(
             src_tokens,
             src_lengths=src_lengths,
-            cls_input=cls_input,
             return_all_hiddens=return_all_hiddens,
         )
         decoder_out = self.decoder(
@@ -382,7 +380,6 @@ class TransformerEncoder(FairseqEncoder):
         self,
         src_tokens,
         src_lengths,
-        cls_input: Optional[Tensor] = None,
         return_all_hiddens: bool = False,
     ):
         """
@@ -578,6 +575,11 @@ class TransformerDecoder(FairseqIncrementalDecoder):
             else None
         )
 
+        if getattr(args, "layernorm_embedding", False):
+            self.layernorm_embedding = LayerNorm(embed_dim)
+        else:
+            self.layernorm_embedding = None
+
         self.cross_self_attention = getattr(args, "cross_self_attention", False)
 
         if self.decoder_layerdrop > 0.0:
@@ -590,7 +592,10 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         ])
         self.num_layers = len(self.layers)
 
-        self.adaptive_softmax = None
+        if args.decoder_normalize_before and not getattr(args, "no_decoder_final_norm", False):
+            self.layer_norm = LayerNorm(embed_dim)
+        else:
+            self.layer_norm = None
 
         self.project_out_dim = (
             Linear(embed_dim, self.output_embed_dim, bias=False)
@@ -598,6 +603,8 @@ class TransformerDecoder(FairseqIncrementalDecoder):
             else None
         )
 
+        self.adaptive_softmax = None
+        self.output_projection = None
         if args.adaptive_softmax_cutoff is not None:
             self.adaptive_softmax = AdaptiveSoftmax(
                 len(dictionary),
@@ -608,19 +615,7 @@ class TransformerDecoder(FairseqIncrementalDecoder):
                 factor=args.adaptive_softmax_factor,
                 tie_proj=args.tie_adaptive_proj,
             )
-
-        if args.decoder_normalize_before and not getattr(
-            args, "no_decoder_final_norm", False
-        ):
-            self.layer_norm = LayerNorm(embed_dim)
-        else:
-            self.layer_norm = None
-        if getattr(args, "layernorm_embedding", False):
-            self.layernorm_embedding = LayerNorm(embed_dim)
-        else:
-            self.layernorm_embedding = None
-
-        if self.share_input_output_embed:
+        elif self.share_input_output_embed:
             self.output_projection = nn.Linear(
                 self.embed_tokens.weight.shape[1],
                 self.embed_tokens.weight.shape[0],
