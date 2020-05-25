@@ -98,6 +98,9 @@ class RobertaModel(FairseqLanguageModel):
                             help='scalar quantization noise and scalar quantization at training time')
         parser.add_argument('--untie-weights-roberta', action='store_true',
                             help='Untie weights between embeddings and classifiers in RoBERTa')
+        # args for whether to use the [cls] token or sum of feature vectors for RobertaClassificationHead
+        parser.add_argument('--use-cls-token', default=False,
+                            help='Use [cls] token instead of feature vector sum for RobertaClassificationHead')
 
     @classmethod
     def build_model(cls, args, task):
@@ -142,6 +145,7 @@ class RobertaModel(FairseqLanguageModel):
             self.args.pooler_dropout,
             self.args.quant_noise_pq,
             self.args.quant_noise_pq_block_size,
+            self.args.use_cls_token
         )
 
     @property
@@ -242,7 +246,7 @@ class RobertaLMHead(nn.Module):
 class RobertaClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
-    def __init__(self, input_dim, inner_dim, num_classes, activation_fn, pooler_dropout, q_noise=0, qn_block_size=8):
+    def __init__(self, input_dim, inner_dim, num_classes, activation_fn, pooler_dropout, q_noise=0, qn_block_size=8, use_cls_token):
         super().__init__()
         self.dense = nn.Linear(input_dim, inner_dim)
         self.activation_fn = utils.get_activation_fn(activation_fn)
@@ -251,9 +255,13 @@ class RobertaClassificationHead(nn.Module):
             nn.Linear(inner_dim, num_classes), q_noise, qn_block_size
         )
 
+        self.use_cls_token = use_cls_token
+
     def forward(self, features, **kwargs):
-        # x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
-        x = torch.sum(features, dim=1) # sum the vectors for each token
+        if self.use_cls_token:
+            x = features[:, 0, :]  # take <s> token (equiv. to [CLS])
+        else:
+            x = torch.sum(features, dim=1) # sum the vectors for each token
         x = self.dropout(x)
         x = self.dense(x)
         x = self.activation_fn(x)
