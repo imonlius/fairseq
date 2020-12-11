@@ -49,6 +49,9 @@ class SentencePredictionCriterion(FairseqCriterion):
         targets = model.get_targets(sample, [logits]).view(-1)
         sample_size = targets.numel()
 
+        print("Targets:")
+        print(targets)
+
         if not self.regression_target:
             lprobs = F.log_softmax(logits, dim=-1, dtype=torch.float32)
             loss = F.nll_loss(lprobs, targets, reduction='sum')
@@ -56,6 +59,9 @@ class SentencePredictionCriterion(FairseqCriterion):
             logits = logits.view(-1).float()
             targets = targets.float()
             loss = F.mse_loss(logits, targets, reduction='sum')
+
+        print("Preds:")
+        print(logits)
 
         logging_output = {
             'loss': loss.data,

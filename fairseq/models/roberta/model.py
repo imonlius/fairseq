@@ -246,7 +246,7 @@ class RobertaLMHead(nn.Module):
 class RobertaClassificationHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
-    def __init__(self, input_dim, inner_dim, num_classes, activation_fn, pooler_dropout, q_noise=0, qn_block_size=8, use_cls_token):
+    def __init__(self, input_dim, inner_dim, num_classes, activation_fn, pooler_dropout, q_noise, qn_block_size, use_cls_token):
         super().__init__()
         self.dense = nn.Linear(input_dim, inner_dim)
         self.activation_fn = utils.get_activation_fn(activation_fn)
