@@ -6,9 +6,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
+from examples.speech_recognition.data.replabels import pack_replabels
 from fairseq import utils
 from fairseq.criterions import FairseqCriterion, register_criterion
-from examples.speech_recognition.data.replabels import pack_replabels
 
 
 @register_criterion("asg_loss")
@@ -70,7 +70,7 @@ class ASGCriterion(FairseqCriterion):
         self.linseg_maximum = linseg_updates
         self.linseg_message_state = "none" if hide_linseg_messages else "start"
 
-    @staticmethod
+    @classmethod
     def build_criterion(cls, args, task):
         return cls(
             task,
